@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "Phishing Guard MVP",
+  "version": "0.2.0",
+  "description": "主動擷取頁面連結並以本地規則標記可疑風險；使用者點擊 Popup 按鈕時呼叫後端與 OpenAI Responses API。",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Phishing Guard",
+    "default_popup": "src/popup/index.html"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/warning/warning.html"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

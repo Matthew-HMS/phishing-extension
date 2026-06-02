@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Phishing Guard</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="header"><div><h1>Phishing Guard</h1><p id="status">本地防禦中</p></div><span class="badge">Phase 2</span></section>
+      <section class="score-card"><div><span class="label">已掃描</span><strong id="scanned">0</strong></div><div><span class="label">可疑</span><strong id="suspicious">0</strong></div><div><span class="label">高風險</span><strong id="highRisk">0</strong></div></section>
+      <section><h2>最近本地風險</h2><ul id="findings" class="findings"></ul></section>
+      <button id="aiButton" type="button">使用 AI 深度分析</button>
+      <p id="aiMessage" class="message"></p>
+      <section id="aiResult"></section>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

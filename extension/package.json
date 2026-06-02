@@ -1,0 +1,11 @@
+{
+  "name": "phishing-guard-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Phase 1 MVP for Phishing Guard browser extension.",
+  "scripts": {
+    "dev": "echo 'Load this folder directly in chrome://extensions'"
+  },
+  "devDependencies": {},
+  "type": "module"
+}

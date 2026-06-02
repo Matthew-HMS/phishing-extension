@@ -1,0 +1,27 @@
+:root { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #111827; background: #f9fafb; }
+body { width: 340px; margin: 0; }
+.app { padding: 16px; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+h1 { margin: 0; font-size: 20px; }
+h2 { margin: 16px 0 8px; font-size: 14px; }
+p { margin: 4px 0 0; color: #4b5563; }
+.badge { padding: 4px 8px; border-radius: 999px; color: #fff; background: #2563eb; font-size: 12px; font-weight: 700; }
+.score-card { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
+.score-card div { padding: 12px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; }
+.label { display: block; color: #6b7280; font-size: 12px; }
+strong { display: block; margin-top: 4px; font-size: 18px; }
+.findings { display: grid; gap: 8px; max-height: 220px; overflow: auto; padding: 0; margin: 0; list-style: none; }
+.findings li { padding: 10px; border: 1px solid #fee2e2; border-radius: 10px; background: #fff7f7; }
+.findings li.empty { border-color: #e5e7eb; background: #fff; color: #6b7280; }
+.findings span, .findings small { display: block; overflow: hidden; margin-top: 4px; color: #4b5563; text-overflow: ellipsis; white-space: nowrap; }
+button { width: 100%; margin-top: 16px; padding: 10px 12px; border: 0; border-radius: 10px; color: #fff; background: #111827; font-weight: 700; cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: 0.6; }
+.message { min-height: 18px; font-size: 12px; }
+.ai-card { margin-top: 12px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; }
+.ai-card strong { font-size: 15px; }
+.ai-card p { margin-top: 8px; }
+.ai-card ul { margin: 8px 0 0; padding-left: 18px; color: #374151; }
+.ai-card small { display: block; margin-top: 8px; color: #6b7280; }
+.ai-card.high { border-color: #fecaca; background: #fff7f7; }
+.ai-card.medium { border-color: #fed7aa; background: #fffbeb; }
+.ai-card.low { border-color: #bbf7d0; background: #f0fdf4; }
