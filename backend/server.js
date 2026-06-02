@@ -8,7 +8,10 @@
 //   POST /scan     URL-only check (allowlist already handled client-side):
 //                  Safe Browsing + heuristic score -> risk level.
 //   POST /analyze  Deep check with page signals -> may escalate to the LLM.
-import "dotenv/config";
+import dotenv from "dotenv";
+// override: true so keys in backend/.env win over any stale values already
+// exported in the shell environment (otherwise dotenv leaves the shell's wins).
+dotenv.config({ override: true });
 import express from "express";
 import cors from "cors";
 import { TtlCache } from "./src/cache.js";
