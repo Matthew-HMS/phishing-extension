@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="popup.css" />
+    <title>Phishing Guard</title>
+  </head>
+  <body>
+    <header>
+      <img class="logo" src="../icons/icon32.png" alt="" />
+      <span class="name">Phishing Guard</span>
+      <label class="switch" title="Enable protection">
+        <input type="checkbox" id="enabled" aria-label="Enable protection" />
+        <span class="slider"></span>
+      </label>
+    </header>
+
+    <section id="status" class="status status--unknown">
+      <div class="status__icon" id="statusIcon">🛡️</div>
+      <div class="status__risk" id="risk">Checking…</div>
+      <div class="status__host" id="host"></div>
+      <div class="status__source" id="source"></div>
+    </section>
+
+    <ul id="reasons" class="reasons"></ul>
+
+    <button type="button" id="allowBtn" class="allow" hidden>Trust this site</button>
+
+    <div class="blocklist">
+      <span id="blInfo">Blocklist: …</span>
+      <button type="button" id="refreshBtn" class="refresh">Refresh</button>
+    </div>
+
+    <footer>Allowlist → blocklist → heuristics → reputation → LLM</footer>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

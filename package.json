@@ -1,0 +1,10 @@
+{
+  "name": "phishing-guard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Phishing Guard — MV3 extension + proxy backend. Root holds the test runner.",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

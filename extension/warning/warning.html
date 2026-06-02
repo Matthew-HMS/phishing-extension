@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Warning — Phishing Guard</title>
+    <style>
+      html, body { height: 100%; margin: 0; }
+      body {
+        background: #7f1d1d; color: #fff;
+        font-family: system-ui, -apple-system, sans-serif;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .card { max-width: 560px; padding: 32px; text-align: center; }
+      .badge { font-size: 64px; }
+      h1 { font-size: 28px; margin: 12px 0 8px; }
+      .host {
+        font-family: monospace; background: rgba(0, 0, 0, 0.25);
+        padding: 6px 10px; border-radius: 6px; display: inline-block;
+        word-break: break-all; margin-bottom: 8px;
+      }
+      ul { text-align: left; margin: 18px auto; max-width: 440px; line-height: 1.55; }
+      .actions { margin-top: 26px; display: flex; gap: 12px; justify-content: center; }
+      button {
+        padding: 11px 20px; border: 0; border-radius: 8px;
+        font-size: 15px; cursor: pointer;
+      }
+      .back { background: #fff; color: #7f1d1d; font-weight: 600; }
+      .proceed { background: transparent; color: #fecaca; border: 1px solid #fecaca; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="badge" id="badge">⚠️</div>
+      <h1 id="title">Deceptive site blocked</h1>
+      <div class="host" id="host"></div>
+      <p id="subtitle">Phishing Guard flagged this site as dangerous before it loaded.</p>
+      <ul id="reasons"></ul>
+      <div class="actions">
+        <button class="back" id="back">Back to safety</button>
+        <button class="proceed" id="proceed">Proceed anyway (unsafe)</button>
+      </div>
+    </div>
+    <script src="warning.js"></script>
+  </body>
+</html>
