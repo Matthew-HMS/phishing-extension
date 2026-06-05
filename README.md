@@ -15,6 +15,69 @@ It uses a **tiered cascade** so the expensive LLM tier is rarely hit:
 
 Verdicts are cached per-page (origin + path), so repeat visits cost nothing.
 
+---
+
+## Quick start
+
+**1. Backend** — needed for the reputation + AI tiers (local heuristics and the
+blocklist still work without it).
+- *Using the deployed cloud backend:* nothing to do — [extension/config.js](extension/config.js)
+  already points at it (the `https://…run.app` URL + token).
+- *Running locally:* `cd backend && npm install && cp .env.example .env` (add your
+  keys), then `npm start`. Set `BACKEND_URL` to `http://localhost:8787` in
+  [extension/config.js](extension/config.js).
+
+**2. Load the extension**
+1. Open `chrome://extensions`, turn on **Developer mode** (top-right).
+2. Click **Load unpacked** and choose the [extension/](extension/) folder.
+3. Accept the permission prompt — the 🛡️ shield appears in your toolbar (pin it).
+
+Protection is now on.
+
+## Using the extension
+
+### While you browse (automatic)
+You don't have to do anything — every page is checked in the background:
+- **Dangerous site → a full red warning page** *before* it loads ("Deceptive
+  site blocked" for phishing, ☣️ "Dangerous site blocked" for malware). Choose
+  **Back to safety** (closes the tab) or, at your own risk, **Proceed anyway**.
+- **Suspicious login page → a red overlay** after it loads, with the reasons.
+- The toolbar badge shows **!** on suspicious/dangerous pages.
+
+### The popup (click the 🛡️ icon)
+A snapshot of the current tab:
+- **Risk** — ✅ Safe · ⚠️ Suspicious · ⛔ Dangerous — with the reasons and the
+  **detection source** (allowlist / blocklist / heuristics / safe-browsing / llm).
+- **Trust this site** — adds it to your personal allowlist (skips all future
+  checks for that site).
+- **Enable toggle** — turn protection on/off.
+- **Blocklist: N URLs** — how many known-bad URLs are synced, with a **Refresh**.
+
+### Scan the links on a page
+Opening the popup **automatically scans every link** on the page and shows
+**found / unique / risky** counts, then lists the full URLs of any risky links —
+useful on search results, webmail, forums, etc.
+
+### 🤖 AI Diagnosis
+Click it to have the AI inspect the page's links and flag lookalikes the rules
+might miss (typosquats, brand-impersonation domains, raw-IP hosts), each with a
+confidence and reason. (Requires the backend's OpenAI key with active billing.)
+
+### Try it safely
+- **Heuristic block:** type `https://login.secure.account.paypa1.xyz/signin` — it
+  won't resolve, but you'll still get the warning (proof it blocks before load).
+- **Real reputation block** (needs a Safe Browsing key): Google's test pages
+  `https://testsafebrowsing.appspot.com/s/phishing.html` and `…/s/malware.html`.
+
+### If something looks wrong
+- Popup source shows **`heuristics-offline`** → the backend isn't reachable
+  (start it, or check `BACKEND_URL`). Local tiers still protect you.
+- Wrongly blocked a site you trust → open the popup and click **Trust this site**.
+
+---
+
+## How it works (under the hood)
+
 ### Offline blocklist
 
 [extension/lib/blocklist.js](extension/lib/blocklist.js) syncs two free,
