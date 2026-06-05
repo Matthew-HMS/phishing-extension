@@ -81,3 +81,60 @@ function clamp01(n) {
   if (Number.isNaN(n)) return 0;
   return Math.max(0, Math.min(1, n));
 }
+
+const URL_LIST_SYSTEM_PROMPT = `You are a phishing/malware URL classifier. You are given ONLY a list of URLs (no page content). Judge each URL from the string alone.
+
+Flag a URL as phishing/malicious when the URL itself shows: brand impersonation or typosquatting (e.g. paypa1, g00gle, brand names in a subdomain of an unrelated domain), deceptive or excessive subdomains, suspicious/abused TLDs, raw IP-address hosts, random-looking domains, or credential-harvest paths (login/verify/secure/account on an unrelated domain).
+
+Be conservative: well-known legitimate domains and ordinary pages are NOT phishing. When unsure, mark phishing=false.
+
+Respond with STRICT JSON only, no prose:
+{"results":[{"url":"<exact input url>","phishing":boolean,"confidence":0.0-1.0,"reason":"one short sentence"}]}
+Return exactly one entry per input URL, preserving the url string verbatim.`;
+
+/**
+ * Classify a list of URLs from their strings alone (no page fetch).
+ * @returns {Promise<null | Array<{url:string, phishing:boolean, confidence:number, reason:string}>>}
+ *          null when the LLM is unavailable (no key / error).
+ */
+export async function classifyUrlsWithLLM(urls) {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return null;
+  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const list = (urls || []).slice(0, 50);
+  if (list.length === 0) return [];
+
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model,
+        temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: URL_LIST_SYSTEM_PROMPT },
+          { role: "user", content: JSON.stringify({ urls: list }) },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      console.warn("OpenAI (url list) error:", res.status, await res.text());
+      return null;
+    }
+    const data = await res.json();
+    const raw = data.choices?.[0]?.message?.content;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const results = Array.isArray(parsed.results) ? parsed.results : [];
+    return results.map((r) => ({
+      url: String(r.url || ""),
+      phishing: !!r.phishing,
+      confidence: clamp01(Number(r.confidence)),
+      reason: String(r.reason || ""),
+    }));
+  } catch (err) {
+    console.warn("OpenAI (url list) request failed:", err.message);
+    return null;
+  }
+}

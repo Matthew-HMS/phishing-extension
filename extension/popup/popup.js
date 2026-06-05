@@ -86,6 +86,132 @@ async function loadBlocklistInfo() {
   el.textContent = `Blocklist: ${size.toLocaleString()} URLs · ${relativeTime(info?.ts)}`;
 }
 
+// ---- scan links on this page --------------------------------------------
+
+function setCounts({ found, unique, risky }) {
+  if (found != null) document.getElementById("scFound").textContent = found;
+  if (unique != null) document.getElementById("scUnique").textContent = unique;
+  if (risky != null) document.getElementById("scRisky").textContent = risky;
+}
+
+// Live progress while the background scans.
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg?.type === "SCAN_PROGRESS") {
+    setCounts({ found: msg.found, unique: msg.unique, risky: msg.risky });
+    if (msg.scanned < msg.total) {
+      document.getElementById("scNote").textContent = `Scanning… ${msg.scanned}/${msg.total}`;
+    }
+  }
+});
+
+function renderScanResult(result) {
+  const note = document.getElementById("scNote");
+  const list = document.getElementById("scList");
+  list.innerHTML = "";
+
+  if (result?.error) {
+    note.textContent = result.error;
+    return;
+  }
+
+  setCounts(result);
+  note.textContent =
+    result.scanned < result.unique
+      ? `Scanned first ${result.scanned} of ${result.unique} unique links.`
+      : result.risky === 0
+        ? "No risky links found."
+        : "";
+
+  for (const item of result.riskyList || []) {
+    const li = document.createElement("li");
+    const head = document.createElement("div");
+    head.className = "linkhead";
+    const tag = document.createElement("span");
+    tag.className = `tag tag-${item.risk}`;
+    tag.textContent = item.risk === "HIGH" ? "⛔" : "⚠️";
+    const link = document.createElement("span");
+    link.className = "url";
+    link.textContent = item.url; // full link, not just the domain
+    head.append(tag, link);
+    const why = document.createElement("div");
+    why.className = "why";
+    why.textContent = item.reason || "";
+    li.append(head, why);
+    li.title = item.url;
+    list.appendChild(li);
+  }
+}
+
+// Runs automatically when the popup opens — rule-based scan of every link.
+async function runRuleScan() {
+  const tab = await currentTab();
+  if (!tab || !/^https?:/.test(tab.url || "")) {
+    renderScanResult({ error: "Can't scan this page." });
+    return;
+  }
+  const result = await send({ type: "SCAN_LINKS", tabId: tab.id });
+  renderScanResult(result);
+}
+
+function renderAiResult(result) {
+  const note = document.getElementById("aiNote");
+  const list = document.getElementById("aiList");
+  list.innerHTML = "";
+
+  if (result?.error) {
+    note.textContent = result.error;
+    return;
+  }
+  const flagged = result.results || [];
+  if ((result.analyzed ?? 0) === 0) {
+    note.textContent = "No external links to diagnose on this page.";
+    return;
+  }
+  note.textContent = flagged.length
+    ? `AI flagged ${flagged.length} of ${result.analyzed} link(s) checked:`
+    : `AI checked ${result.analyzed} link(s); none look like phishing.`;
+
+  for (const item of flagged) {
+    const li = document.createElement("li");
+    const head = document.createElement("div");
+    head.className = "linkhead";
+    const tag = document.createElement("span");
+    tag.className = "tag tag-HIGH";
+    tag.textContent = "🤖";
+    const link = document.createElement("span");
+    link.className = "url";
+    link.textContent = item.url;
+    head.append(tag, link);
+    const why = document.createElement("div");
+    why.className = "why";
+    const conf = item.confidence != null ? ` (${Math.round(item.confidence * 100)}%)` : "";
+    why.textContent = (item.reason || "") + conf;
+    li.append(head, why);
+    li.title = item.url;
+    list.appendChild(li);
+  }
+}
+
+function initAiButton() {
+  const aiBtn = document.getElementById("aiBtn");
+  aiBtn.addEventListener("click", async () => {
+    const tab = await currentTab();
+    if (!tab || !/^https?:/.test(tab.url || "")) {
+      document.getElementById("aiNote").textContent = "Can't scan this page.";
+      return;
+    }
+    aiBtn.disabled = true;
+    aiBtn.textContent = "🤖 Diagnosing…";
+    document.getElementById("aiList").innerHTML = "";
+    document.getElementById("aiNote").textContent = "Sending links to AI…";
+
+    const result = await send({ type: "AI_DIAGNOSE_LINKS", tabId: tab.id });
+    renderAiResult(result);
+    aiBtn.disabled = false;
+    aiBtn.textContent = "🤖 AI Diagnosis";
+  });
+}
+
 async function init() {
   const enabledEl = document.getElementById("enabled");
   const { enabled } = await send({ type: "GET_ENABLED" });
@@ -106,6 +232,8 @@ async function init() {
   });
 
   loadBlocklistInfo();
+  initAiButton();
+  runRuleScan();
 
   const tab = await currentTab();
   if (!tab) return render(null);

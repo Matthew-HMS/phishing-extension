@@ -3,7 +3,7 @@
   "name": "Phishing Guard",
   "version": "0.1.0",
   "description": "Detects phishing sites while you browse using reputation lookups, local heuristics, and an LLM verdict for unknown sites.",
-  "permissions": ["webNavigation", "tabs", "storage", "alarms", "declarativeNetRequest"],
+  "permissions": ["webNavigation", "tabs", "storage", "alarms", "declarativeNetRequest", "scripting"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "background": {
     "service_worker": "background.js",

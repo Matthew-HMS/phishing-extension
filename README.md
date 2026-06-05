@@ -57,8 +57,10 @@ Extension (MV3)
   warning/        Full-page interstitial for blocked navigations.
 
 Backend (Node/Express proxy — holds the keys)
-  POST /scan      URL-only: Safe Browsing + heuristic score → risk level.
-  POST /analyze   URL + page signals → escalates to OpenAI only when warranted.
+  POST /scan        URL-only: Safe Browsing + heuristic score → risk level.
+  POST /scan-batch     Many URLs in one Safe Browsing call (auto page-link scan).
+  POST /diagnose-links LLM judges a list of URLs from their strings (AI Diagnosis).
+  POST /analyze        URL + page signals → escalates to OpenAI when warranted.
 ```
 
 > **Why a backend?** A browser extension can't safely store API keys — anyone
@@ -85,6 +87,10 @@ Edit `.env`:
   (powers Tier 3). Optional but strongly recommended.
 
 Check it's up: `curl localhost:8787/health`
+
+> **Deploying to the cloud** (so you don't run it locally): see
+> [DEPLOY.md](DEPLOY.md). It covers Google Cloud Run (recommended — free HTTPS),
+> the `API_TOKEN` lock-down, and a VM alternative.
 
 ### 2. Extension
 
@@ -131,6 +137,23 @@ Check it's up: `curl localhost:8787/health`
   heuristics use this for correct registrable-domain ("eTLD+1") parsing —
   essential for multi-part suffixes like `com.tw` / `co.uk` and private
   suffixes like `github.io`.
+
+## Page-link scanning + AI Diagnosis
+
+When the popup opens it **automatically** scans every link on the page. It
+injects a collector (`chrome.scripting`) to gather each `<a href>`,
+de-duplicates by `host + path`, and runs them through the **URL-level** cascade
+(allowlist → blocklist → cache → heuristics → reputation). Unknown links go to
+`/scan-batch`, so the whole page costs a single Safe Browsing call. The popup
+shows live **found / unique / risky** counts and lists the risky links (full
+URLs).
+
+The **🤖 AI Diagnosis** button sends the page's links to the LLM
+(`/diagnose-links`), which judges each one **from the URL string alone** — brand
+impersonation, typosquatting, deceptive subdomains, raw-IP hosts, etc. (no page
+fetch). It lists the links the AI flags, with a confidence and reason.
+Allowlisted hosts are skipped and the request is capped (40 links) to bound
+cost. Requires active OpenAI billing.
 
 ## Tests
 

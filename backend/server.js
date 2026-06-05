@@ -15,8 +15,8 @@ dotenv.config({ override: true });
 import express from "express";
 import cors from "cors";
 import { TtlCache } from "./src/cache.js";
-import { checkSafeBrowsing } from "./src/safeBrowsing.js";
-import { classifyWithLLM } from "./src/llm.js";
+import { checkSafeBrowsing, checkSafeBrowsingBatch } from "./src/safeBrowsing.js";
+import { classifyWithLLM, classifyUrlsWithLLM } from "./src/llm.js";
 import {
   RISK,
   categoryFromThreats,
@@ -25,8 +25,25 @@ import {
 } from "./src/classify.js";
 
 const app = express();
-app.use(cors()); // dev: allow the extension origin. Restrict in production.
+app.set("trust proxy", true); // behind Cloud Run / a reverse proxy: real client IP
+// CORS: lock to a specific origin in production via ALLOWED_ORIGIN; open in dev.
+// (Note: MV3 extension fetches with host permission bypass CORS anyway — the
+// API token below is the real access control.)
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN;
+app.use(cors(ALLOWED_ORIGIN ? { origin: ALLOWED_ORIGIN } : {}));
 app.use(express.json({ limit: "256kb" }));
+
+// Shared-secret gate for the spending endpoints. If API_TOKEN is set (in the
+// cloud), every protected request must send "Authorization: Bearer <token>".
+// If unset (local dev), the gate is open.
+const API_TOKEN = process.env.API_TOKEN;
+function requireToken(req, res, next) {
+  if (!API_TOKEN) return next();
+  const h = req.get("authorization") || "";
+  const tok = h.startsWith("Bearer ") ? h.slice(7) : "";
+  if (tok !== API_TOKEN) return res.status(401).json({ error: "unauthorized" });
+  next();
+}
 
 const verdictCache = new TtlCache(60 * 60 * 1000); // 1h, keyed by hostname
 
@@ -78,7 +95,7 @@ app.get("/health", (_req, res) => {
 });
 
 // --- /scan: fast, URL-only -----------------------------------------------
-app.post("/scan", rateLimit, async (req, res) => {
+app.post("/scan", requireToken, rateLimit, async (req, res) => {
   const { url, heuristicScore = 0, heuristicReasons = [] } = req.body || {};
   const host = hostnameOf(url);
   if (!host) return res.status(400).json({ error: "invalid url" });
@@ -112,8 +129,59 @@ app.post("/scan", rateLimit, async (req, res) => {
   res.json(verdict);
 });
 
+// --- /scan-batch: many URLs in one request (used by "scan page links") -----
+// Body: { items: [{ url, heuristicScore, heuristicReasons }, ...] }
+// One Safe Browsing call covers all URLs, so this is far cheaper than N /scan
+// calls and avoids the per-request rate limit.
+app.post("/scan-batch", requireToken, rateLimit, async (req, res) => {
+  const items = Array.isArray(req.body?.items) ? req.body.items.slice(0, 500) : [];
+  const urls = items.map((it) => it.url).filter(Boolean);
+  const sbMap = await checkSafeBrowsingBatch(urls);
+
+  const results = items.map((it) => {
+    const key = cacheKeyOf(it.url);
+    if (!key) return { url: it.url, risk: RISK.SAFE, reasons: ["invalid url"], source: "error" };
+
+    const cached = verdictCache.get(key);
+    if (cached) return { url: it.url, ...cached };
+
+    const threats = sbMap.get(it.url) || [];
+    let verdict;
+    if (threats.length) {
+      verdict = {
+        risk: RISK.HIGH,
+        reasons: [`Listed by Google Safe Browsing (${threats.join(", ")})`],
+        category: categoryFromThreats(threats),
+        source: "safe-browsing",
+      };
+    } else {
+      verdict = {
+        risk: riskFromHeuristics(it.heuristicScore || 0),
+        reasons: it.heuristicReasons || [],
+        category: "phishing",
+        source: "heuristics",
+      };
+    }
+    if (verdict.risk === RISK.HIGH || verdict.risk === RISK.SAFE) verdictCache.set(key, verdict);
+    return { url: it.url, ...verdict };
+  });
+
+  res.json({ results });
+});
+
+// --- /diagnose-links: LLM judgment over a list of URLs (no page fetch) ----
+// Body: { urls: [...] }  -> { results: [{url, phishing, confidence, reason}], available }
+app.post("/diagnose-links", requireToken, rateLimit, async (req, res) => {
+  const urls = Array.isArray(req.body?.urls) ? req.body.urls.slice(0, 50) : [];
+  if (urls.length === 0) return res.json({ results: [], available: true });
+
+  const llm = await classifyUrlsWithLLM(urls);
+  if (!llm) return res.json({ results: [], available: false }); // no key / error / billing
+  res.json({ results: llm, available: true });
+});
+
 // --- /analyze: deep, may use the LLM -------------------------------------
-app.post("/analyze", rateLimit, async (req, res) => {
+app.post("/analyze", requireToken, rateLimit, async (req, res) => {
   const { url, heuristicScore = 0, heuristicReasons = [], page } = req.body || {};
   const host = hostnameOf(url);
   if (!host) return res.status(400).json({ error: "invalid url" });
@@ -182,4 +250,5 @@ app.listen(PORT, () => {
   console.log(`Phishing Guard backend listening on http://localhost:${PORT}`);
   console.log(`  Safe Browsing: ${process.env.GOOGLE_SAFE_BROWSING_KEY ? "enabled" : "DISABLED (set GOOGLE_SAFE_BROWSING_KEY)"}`);
   console.log(`  OpenAI LLM:    ${process.env.OPENAI_API_KEY ? "enabled" : "DISABLED (set OPENAI_API_KEY)"}`);
+  console.log(`  API token:     ${API_TOKEN ? "REQUIRED" : "open (set API_TOKEN to lock down)"}`);
 });

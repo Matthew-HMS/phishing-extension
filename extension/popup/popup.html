@@ -27,6 +27,21 @@
 
     <button type="button" id="allowBtn" class="allow" hidden>Trust this site</button>
 
+    <div class="scan">
+      <div class="scanTitle">Links on this page</div>
+      <div class="scanCounts">
+        <span><b id="scFound">0</b><br />found</span>
+        <span><b id="scUnique">0</b><br />unique</span>
+        <span class="risky"><b id="scRisky">0</b><br />risky</span>
+      </div>
+      <div id="scNote" class="scNote">Scanning…</div>
+      <ul id="scList" class="scList"></ul>
+
+      <button type="button" id="aiBtn" class="scanBtn aiBtn">🤖 AI Diagnosis</button>
+      <div id="aiNote" class="scNote"></div>
+      <ul id="aiList" class="scList"></ul>
+    </div>
+
     <div class="blocklist">
       <span id="blInfo">Blocklist: …</span>
       <button type="button" id="refreshBtn" class="refresh">Refresh</button>

@@ -1,0 +1,42 @@
+name: Deploy backend (Cloud Run)
+
+# Auto-deploys the backend to Cloud Run when backend/ changes on main.
+# Also runnable manually from the Actions tab (workflow_dispatch).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Authenticate to Google Cloud with a service-account key stored in the
+      # repo secret GCP_SA_KEY. (See DEPLOY.md for the keyless WIF alternative.)
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # Build from source (uses backend/Dockerfile) and deploy.
+      - id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: phishing-guard
+          region: asia-east1
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          source: backend
+          flags: "--allow-unauthenticated --max-instances=1"
+          env_vars: |-
+            OPENAI_MODEL=gpt-4o-mini
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            GOOGLE_SAFE_BROWSING_KEY=${{ secrets.GOOGLE_SAFE_BROWSING_KEY }}
+            API_TOKEN=${{ secrets.API_TOKEN }}
+
+      - name: Show service URL
+        run: echo "Deployed to ${{ steps.deploy.outputs.url }}"
